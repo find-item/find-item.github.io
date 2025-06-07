@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <title>아이템 추가</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-storage-compat.js"></script>
+  <style>
+    .form-wrapper {
+      max-width: 500px;
+      margin: 2em auto;
+      padding: 2em;
+      background: #fefde5;
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    #image-preview {
+      width: 100%;
+      height: 200px;
+      background-color: #fff;
+      border-radius: 16px;
+      border: 2px dashed #ccc;
+      text-align: center;
+      position: relative;
+      cursor: pointer;
+      margin-bottom: 1.5em;
+    }
+
+    #image-preview span {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #666;
+      font-size: 16px;
+    }
+
+    #image-preview strong {
+      font-size: 36px;
+      display: block;
+    }
+
+    #image-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 16px;
+      display: none;
+    }
+
+    .field {
+      margin-bottom: 1em;
+    }
+
+    .field label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 0.4em;
+    }
+
+    .field input,
+    .field textarea,
+    .field select {
+      width: 100%;
+      padding: 0.6em;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      font-size: 1em;
+    }
+
+    .submit-button {
+      width: 100%;
+      padding: 1em;
+      background: #111;
+      color: #fff;
+      border-radius: 16px;
+      border: none;
+      font-size: 1em;
+    }
+    
+        .button.save-button {
+            margin-top: 1.5em;
+            background-color: #1ec743;
+            /* 진한 네이비/블루 */
+            color: white;
+            border-radius: 16px;
+            font-size: 1em;
+            border: none;
+        }
+
+        /* 취소 버튼 - 라이트그레이 */
+        .button.cancel-button {
+            margin-top: 1.5em;
+            background-color: #e0e0e0;
+            color: #333;
+            border-radius: 16px;
+            border: none;
+            font-size: 1em;
+        }
+  </style>
+</head>
+
+<body>
+  <div class="form-wrapper">
+    <div id="image-preview" onclick="document.getElementById('image-file').click()">
+      <span id="image-placeholder">사진 추가<br><strong>+</strong></span>
+      <img id="preview-img" src="" alt="" />
+    </div>
+    <input type="file" id="image-file" accept="image/*" capture="environment" style="display: none;" />
+
+    <div class="field">
+      <label>이름</label>
+      <input type="text" id="item-name" placeholder="예: 복숭아" required />
+    </div>
+
+    <div class="field">
+      <label>위치</label>
+      <select id="item-location">
+        <option value="냉장실">냉장실</option>
+        <option value="냉동실">냉동실</option>
+        <option value="기타">기타</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>종류</label>
+      <input type="text" id="item-category" placeholder="예: 과일" />
+    </div>
+
+    <div class="field">
+      <label>개수</label>
+      <input type="number" id="item-quantity" min="0" value="1" />
+    </div>
+
+    <div class="field">
+      <label>메모</label>
+      <textarea id="item-memo" rows="2" placeholder="메모를 입력하세요."></textarea>
+    </div>
+
+    <button class="button save-button" onclick="submitItem()">물건 등록</button>
+    <button class="button cancel-button" onclick="cancelInsert()">취소</button>
+         
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBqLZ4TcG3Ouk_z5tRBbJmccqoLuLwKYD0",
+      authDomain: "my-item-where.firebaseapp.com",
+      projectId: "my-item-where",
+      storageBucket: "my-item-where.firebasestorage.app",
+      messagingSenderId: "444379742869",
+      appId: "1:444379742869:web:a0ec7325e321579dbb119c"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+    const params = new URLSearchParams(window.location.search)
+    const storageId = params.get("storageId");
+    const username = params.get("name");
+
+    let uploadedImageUrl = "";
+
+    document.getElementById("image-file").addEventListener("change", async function () {
+      const file = this.files[0];
+      if (!file) return;
+
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const maxWidth = 480;
+        const scale = maxWidth / img.width;
+        canvas.width = maxWidth;
+        canvas.height = img.height * scale;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob(async (blob) => {
+          document.getElementById("preview-img").src = canvas.toDataURL("image/jpeg");
+          document.getElementById("preview-img").style.display = "block";
+          document.getElementById("image-placeholder").style.display = "none";
+
+          const imageRef = storage.ref().child(`items/${Date.now()}.jpg`);
+          const snapshot = await imageRef.put(blob);
+          uploadedImageUrl = await snapshot.ref.getDownloadURL();
+        }, 'image/jpeg', 0.7);
+      };
+    });
+    // 취소버튼 클릭
+    function cancelInsert() {
+      window.location.href = `item_list.html?storageId=${storageId}&name=${encodeURIComponent(username)}`;
+    }
+    async function submitItem() {
+      const name = document.getElementById("item-name").value.trim();
+      const location = document.getElementById("item-location").value;
+      const category = document.getElementById("item-category").value.trim();
+      const quantity = parseInt(document.getElementById("item-quantity").value);
+      const memo = document.getElementById("item-memo").value.trim();
+
+      if (!name || !storageId) {
+        alert("이름 또는 저장소 이름이 누락되었습니다.");
+        return;
+      }
+
+      try {
+        // ✅ ID로 직접 문서 접근
+        const storageDocRef = db.collection("storages").doc(storageId);
+        const docSnapshot = await storageDocRef.get();
+
+        if (!docSnapshot.exists) {
+          alert("저장소를 찾을 수 없습니다.");
+          return;
+        }
+
+        // ✅ 하위 컬렉션에 아이템 추가
+        await storageDocRef.collection("refrigerator_items").add({
+          name,
+          location,
+          category,
+          quantity,
+          memo,
+          image: uploadedImageUrl,
+          createdAt: new Date()
+        });
+
+        alert("아이템이 등록되었습니다.");
+        window.location.href = `item_list.html?storageId=${storageId}&name=${encodeURIComponent(username)}`;
+
+      } catch (e) {
+        alert("등록 중 오류 발생: " + e.message);
+      }
+    }
+  </script>
+</body>
+
+</html>
