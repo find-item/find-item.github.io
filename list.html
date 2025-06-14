@@ -173,6 +173,7 @@
 					<p>이름: ${data.name}</p>
 					<p>용량: ${data.capacity}</p>
 					<p>등록일: ${createdAtFormatted}</p>
+					<div id="items-${storageId}"></div>
 				`;
 				//데이터 네임누르고 아이템 목록 이동
 				card.setAttribute("onclick", `goToStorage('${doc.id}')`);
@@ -191,8 +192,8 @@
 					itemHtml.push(`<li>${item.name} - ${item.location} (${item.quantity}개)</li>`);
 				});
 
-				document.getElementById(`items-${storageId}`).innerHTML =
-					itemHtml.length > 0 ? `<ul>${itemHtml.join("")}</ul>` : "아이템 없음";
+				// document.getElementById(`items-${storageId}`).innerHTML =
+				// 	itemHtml.length > 0 ? `<ul>${itemHtml.join("")}</ul>` : "빈 저장고";
 
 
 			});

@@ -52,21 +52,25 @@
             </div>
 
         </div>
-</div>
-        <!-- Scripts -->
-        <script>
-            function goToList() {
-                const name = document.getElementById('username').value;
-                if (name) {
-                    window.location.href = `list.html?name=${encodeURIComponent(name)}`;
+    </div>
+    <!-- Scripts -->
+    <script>
+        function goToList() {
+            const name = document.getElementById('username').value;
+            if (name) {
+                // Flutter에 userName 저장 요청
+                if (window.flutter_inappwebview) {
+                    window.flutter_inappwebview.callHandler("saveUserName", name);
                 }
+                window.location.href = `list.html?name=${encodeURIComponent(name)}`;
             }
-        </script>
-        <script src="assets/js/jquery.min.js"></script>
-        <script src="assets/js/browser.min.js"></script>
-        <script src="assets/js/breakpoints.min.js"></script>
-        <script src="assets/js/util.js"></script>
-        <script src="assets/js/main.js"></script>
+        }
+    </script>
+    <script src="assets/js/jquery.min.js"></script>
+    <script src="assets/js/browser.min.js"></script>
+    <script src="assets/js/breakpoints.min.js"></script>
+    <script src="assets/js/util.js"></script>
+    <script src="assets/js/main.js"></script>
 
 </body>
 
